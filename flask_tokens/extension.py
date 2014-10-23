@@ -10,8 +10,12 @@ DEFAULT_CONFIG = {
 	'TOKENS_LEEWAY': datetime.timedelta(seconds=0)
 }
 
+# Proxy used to access the currently signed in user; this is only set if
+# verify_token has been called. If you want it available everywhere, you can
+# call verify_token in a before_request() handler.
 current_user = LocalProxy(lambda: _request_ctx_stack.top.current_user)
 
+# Just stick this thing onto your Flask object, and decorate some handlers.
 class Tokens(object):
 	_user_loader = None
 	_serializer = None
@@ -84,7 +88,13 @@ class Tokens(object):
 			# The token has already expired, and the leeway couldn't save it :(
 			return None
 		
+		# Deserialize a proper user object from the payload
 		user = self._deserializer(payload)
+		
+		# If there's a verfier provided, run that before accepting the token!
+		# This is what makes token revocation, etc. possible; you can just run
+		# a function that looks the token up in a db, checks an "issued at"
+		# timestamp against a "all tokens revoked at" one, etc.
 		if not self._verifier or self._verifier(user):
 			_request_ctx_stack.top.current_user = user
 			return user
