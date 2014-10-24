@@ -62,7 +62,7 @@ class Tokens(object):
 		# Register the extension on the application object
 		if not hasattr(app, 'extensions'):
 			app.extensions = {}
-		app.extensions['extensionname'] = self
+		app.extensions['tokens'] = self
 		
 		# Register default configuration values
 		for key, value in DEFAULT_CONFIG.items():
