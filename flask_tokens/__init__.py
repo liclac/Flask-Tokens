@@ -203,28 +203,193 @@ class Tokens(object):
 	
 	
 	def user_loader(self, handler):
+		'''Callback for authenticating a user's credentials.
+		
+		Should return some kind of representation of the user if the
+		authorization is successful, None otherwise.
+		
+		```
+		@tokens.user_loader
+		def user_loader(auth):
+			user = User.query.filter_by(username=auth['username']).first()
+			if user and user.verify_password(auth['password']):
+				return user
+		```
+		'''
 		self._user_loader = handler
 	
 	def serializer(self, handler):
+		'''Callback for serializing a user into a token payload.
+		
+		Should return a dictionary of items that can be used to uniquely
+		identify the user.
+		
+		Do not store sensitive information (eg. passwords) in the token!
+		Tokens are signed with your SECRET_KEY, which means nobody can tamper
+		with them unless they know your secret, but anyone can decode the
+		payload and have a look inside.
+		
+		Examples of good identifiers:
+			- an ID
+			- a username
+			- a Facebook/Twitter/... profile
+		
+		There is no hard upper limit on how much you can put into your tokens,
+		but do try not to put anything unnecesary in there. The less data has
+		to be transmitted with every authenticated request, the better.
+		
+		```
+		@tokens.serializer
+		def serializer(user):
+			return { 'user_id': user.id }
+		```
+		'''
 		self._serializer = handler
 	
 	def deserializer(self, handler):
+		'''Callback for deserializing a token payload into a user.
+		
+		Should return a user object, identified by the information in the
+		payload. This is the opposite of serializer.
+		
+		```
+		@tokens.deserializer
+		def deserializer(payload):
+			return User.query.get(payload['user_id'])
+		```
+		'''
 		self._deserializer = handler
 	
 	def payload_handler(self, handler):
+		'''(optional) Callback for postprocessing the proposed payload.
+		
+		This is your chance to add or remove objects or claims from the token
+		payload before it is encoded and returned. The payload will at this
+		point contain the keys returned from the serializer, and the 'exp'
+		(expiry time) claim (as a datetime object).
+		
+		```
+		from datetime import datetime
+		
+		@tokens.payload_handler
+		def payload_handler(payload):
+			# Store the timestamp for when the token was issued as 'iat'
+			payload['iat'] = (datetime.utcnow() - datetime.utcfromtimestamp(0)).total_seconds()
+			return payload
+		'''
 		self._payload_handler = handler
 	
 	def verifier(self, handler):
+		'''(optional) Callback for verifying tokens.
+		
+		Should simply return True or False for whether the token is still valid
+		or not. Expiry checking is done separately, and expired tokens will not
+		even get passed to this handler.
+		
+		If you want to implement token revocation (especially important if
+		you're using nonexpiring tokens and/or revocation tokens), here's where
+		you'll want to look the token up in a database, compare their issued
+		time against a revocation time, etc.
+		
+		```
+		from datetime import datetime
+		
+		@tokens.verifier
+		def verifier(user, payload):
+			# Assuming payload_handler adds the timestamp for when the token
+			# was issued as 'iat', and the user has the datetime for when all
+			# tokens were last revoked as 'last_revocation'
+			return datetime.utcfromtimestamp(payload['iat']) > user.last_revocation
+		```
+		'''
 		self._verifier = handler
 	
 	def refresh_handler(self, handler):
+		'''Callback for refreshing a token.
+		
+		*(Not used if refresh tokens are disabled.)*
+		
+		Look the refresh token up to see if it's valid, and return the payload,
+		or None if the token is invalid. You may modify the payload, but as
+		payload_handler will be run after this, so there should be little need.
+		
+		```
+		@tokens.refresh_handler
+		def refresh_handler(user, payload, refresh_token):
+			if refresh_token == user.refresh_token:
+				return payload
+		```
+		'''
 		self._refresh_handler = handler
 	
 	def refresh_issuer(self, handler):
+		'''Callback for issuing a refresh token.
+		
+		*(Not used if refresh tokens are disabled.)*
+		
+		Issue a new refresh token (or reuse an existing one). Refresh tokens
+		should be unguessable strings that can be verified on the server side,
+		presumably randomly generated, that can be invalidated at will.
+		
+		```
+		import string, random
+		
+		@tokens.refresh_issuer
+		def refresh_issuer(user):
+			# If there is no refresh token, just generate 50 random characters.
+			if not user.refresh_token:
+				user.refresh_token = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(50))
+		```
+		'''
 		self._refresh_issuer = handler
 	
 	def auth_response_handler(self, handler):
+		'''(optional) Callback for processing the auth view response.
+		
+		The response is a dictionary, by default:
+		
+		```
+		{
+			"token": "Encoded token goes here",
+			"refresh_token": "Refresh token here (unless those are disabled)"
+		}
+		```
+		
+		If you want to add or remove items from the dictionary, here's your
+		chance to do so.
+		
+		```
+		from datetime import datetime
+		
+		@tokens.auth_response_handler
+		def auth_response_handler(payload):
+			payload['expires_at'] = (datetime.utcnow() + current_app.config.get('TOKENS_EXPIRY') - datetime.utcfromtimestamp(0)).total_seconds()
+			return payload
+		```
+		'''
 		self._auth_response_handler = handler
 	
 	def refresh_response_handler(self, handler):
+		'''(optional) Callback for processing the refresh view response.
+		
+		Similar to auth_response_handler, for the refresh endpoint. Default
+		response is:
+		
+		```
+		{
+			"token": "Encoded, renewed token goes here"
+		}
+		```
+		
+		Add or remove items at will.
+		
+		```
+		from datetime import datetime
+		
+		@tokens.refresh_response_handler
+		def refresh_response_handler(payload):
+			payload['expires_at'] = (datetime.utcnow() + current_app.config.get('TOKENS_EXPIRY') - datetime.utcfromtimestamp(0)).total_seconds()
+			return payload
+		```
+		'''
 		self._refresh_response_handler = handler
