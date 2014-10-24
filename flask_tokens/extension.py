@@ -2,7 +2,6 @@ import datetime
 import jwt
 from flask import Blueprint, current_app, _request_ctx_stack
 from werkzeug.local import LocalProxy
-from .blueprint import bp
 
 DEFAULT_CONFIG = {
 	'TOKENS_EXPIRY': datetime.timedelta(hours=10),
