@@ -33,8 +33,9 @@ def _authorize_route():
 	res = {}
 	
 	token = ext.make_token(request.form)
-	res['token'] = token
 	if not token: abort(403)
+	
+	res['token'] = token
 	
 	if current_app.config.get('TOKENS_ENABLE_REFRESH'):
 		refresh_token = ext.issue_refresh_token(current_user)
@@ -42,17 +43,34 @@ def _authorize_route():
 			res['refresh_token'] = refresh_token
 	
 	if ext._auth_response_handler:
-		res = ext._auth_response_handler(user, res)
+		res = ext._auth_response_handler(current_user, res)
 	
-	return jsonify(token=token)
+	return jsonify(res)
 
 def _refresh_route():
 	'''Endpoint for refreshing an expired token.
 	
 	It takes two POST parameters: token, and refresh_token. The former is an
 	old token to be renewed, the latter is a refresh token to authorize it.
+	
+	This is not mounted at all if 'TOKENS_ENABLE_REFRESH' is False.
 	'''
-	pass
+	if not 'token' in request.form or not 'refresh_token' in request.form:
+		abort(400)
+	
+	ext = current_app.extensions['tokens']
+	res = {}
+	
+	old_token = request.form['token']
+	refresh_token = request.form['refresh_token']
+	token = ext.refresh_token(old_token, refresh_token)
+	
+	res['token'] = token
+	
+	if ext._auth_response_handler:
+		res = ext._auth_response_handler(current_user, res)
+	
+	return jsonify(res)
 
 # Just stick this thing onto your Flask object, and decorate some handlers.
 class Tokens(object):
@@ -64,6 +82,7 @@ class Tokens(object):
 	_refresh_handler = None
 	_refresh_issuer = None
 	_auth_response_handler = None
+	_refresh_response_handler = None
 	
 	
 	
@@ -206,3 +225,6 @@ class Tokens(object):
 	
 	def auth_response_handler(self, handler):
 		self._auth_response_handler = handler
+	
+	def refresh_response_handler(self, handler):
+		self._refresh_response_handler = handler
