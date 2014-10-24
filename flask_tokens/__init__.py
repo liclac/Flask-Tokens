@@ -141,7 +141,7 @@ class Tokens(object):
 		# This is what makes token revocation, etc. possible; you can just run
 		# a function that looks the token up in a db, checks an "issued at"
 		# timestamp against a "all tokens revoked at" one, etc.
-		if not self._verifier or self._verifier(user):
+		if not self._verifier or self._verifier(user, payload):
 			_request_ctx_stack.top.current_user = user
 			return payload
 	
