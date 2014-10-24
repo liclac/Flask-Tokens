@@ -1,6 +1,6 @@
 import datetime
 import jwt
-from flask import Blueprint, current_app, _request_ctx_stack
+from flask import Blueprint, current_app, abort, jsonify, _request_ctx_stack
 from werkzeug.local import LocalProxy
 
 DEFAULT_CONFIG = {
@@ -28,11 +28,13 @@ def _authorize_route():
 	
 	It takes freeform authorization as POST data, runs it through the extension
 	and returns a token, if any.
-	
-	TODO: Refresh Tokens
-	TODO: Add a response processor that can add arbitrary data.
 	'''
-	pass
+	ext = current_app.extensions['tokens']
+	
+	token = ext.make_token(request.form)
+	if not token: abort(403)
+	
+	return jsonify(token=token)
 
 def _refresh_route():
 	'''Endpoint for refreshing an expired token.
