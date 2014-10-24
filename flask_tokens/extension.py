@@ -30,9 +30,19 @@ def _authorize_route():
 	and returns a token, if any.
 	'''
 	ext = current_app.extensions['tokens']
+	res = {}
 	
 	token = ext.make_token(request.form)
+	res['token'] = token
 	if not token: abort(403)
+	
+	if current_app.config.get('TOKENS_ENABLE_REFRESH'):
+		refresh_token = ext.issue_refresh_token(current_user)
+		if refresh_token:
+			res['refresh_token'] = refresh_token
+	
+	if ext._auth_response_handler:
+		res = ext._auth_response_handler(user, res)
 	
 	return jsonify(token=token)
 
@@ -52,6 +62,8 @@ class Tokens(object):
 	_payload_handler = None
 	_verifier = None
 	_refresh_handler = None
+	_refresh_issuer = None
+	_auth_response_handler = None
 	
 	
 	
@@ -130,6 +142,9 @@ class Tokens(object):
 			new_payload = self._make_payload(user, new_payload)
 			return self._encode(payload)
 	
+	def issue_refresh_token(self, user):
+		return self._refresh_issuer(user)
+	
 	
 	
 	def _make_payload(self, user, payload={}):
@@ -185,3 +200,9 @@ class Tokens(object):
 	
 	def refresh_handler(self, handler):
 		self._refresh_handler = handler
+	
+	def refresh_issuer(self, handler):
+		self._refresh_issuer = handler
+	
+	def auth_response_handler(self, handler):
+		self._auth_response_handler = handler
