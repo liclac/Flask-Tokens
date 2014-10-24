@@ -99,7 +99,7 @@ class Tokens(object):
 		# Try to decode the token; abort if it's invalid or expired
 		payload = self._decode(token)
 		if not payload:
-			return None
+			return None, None
 		
 		# Deserialize a proper user object from the payload
 		user = self._deserializer(payload)
@@ -110,7 +110,7 @@ class Tokens(object):
 		# timestamp against a "all tokens revoked at" one, etc.
 		if not self._verifier or self._verifier(user):
 			_request_ctx_stack.top.current_user = user
-			return user
+			return user, payload
 	
 	def refresh_token(self, token, refresh_token):
 		# Decode the token, completely ignoring the expiration
