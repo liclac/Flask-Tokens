@@ -64,6 +64,7 @@ def _refresh_route():
 	old_token = request.form['token']
 	refresh_token = request.form['refresh_token']
 	token = ext.refresh_token(old_token, refresh_token)
+	if not token: abort(403)
 	
 	res['token'] = token
 	
