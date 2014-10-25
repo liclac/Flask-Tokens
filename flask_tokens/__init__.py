@@ -69,7 +69,7 @@ def _refresh_route():
 	res['token'] = token
 	
 	if ext._auth_response_handler:
-		res = ext._auth_response_handler(current_user, res)
+		res = ext._refresh_response_handler(current_user, res)
 	
 	return jsonify(res)
 
@@ -181,19 +181,19 @@ class Tokens(object):
 		# here's your chance to modify the data any way you wish. It's your
 		# token, I don't know what you'll want to put inside it.
 		if self._payload_handler:
-			payload = self._payload_handler(payload, user)
+			payload = self._payload_handler(user, payload)
 		
 		return payload
 	
 	def _encode(self, payload):
 		leeway = current_app.config.get('TOKENS_LEEWAY')
 		secret = current_app.config.get('SECRET_KEY')
-		return jwt.encode(payload, secret, leeway=leeway.total_seconds())
+		return jwt.encode(payload, secret)
 	
 	def _decode(self, token, verify_expiration=True):
 		try:
 			# Try to decode the token - this blows up spectacularly if it fails
-			return jwt.decode(token, current_app.config.get('SECRET_KEY'))
+			return jwt.decode(token, current_app.config.get('SECRET_KEY'), leeway=leeway.total_seconds())
 		except jwt.DecodeError:
 			# The token was tampered with, corrupted or otherwise invalid
 			return None
@@ -273,7 +273,7 @@ class Tokens(object):
 		from datetime import datetime
 		
 		@tokens.payload_handler
-		def payload_handler(payload):
+		def payload_handler(user, payload:
 			# Store the timestamp for when the token was issued as 'iat'
 			payload['iat'] = (datetime.utcnow() - datetime.utcfromtimestamp(0)).total_seconds()
 			return payload
@@ -363,7 +363,7 @@ class Tokens(object):
 		from datetime import datetime
 		
 		@tokens.auth_response_handler
-		def auth_response_handler(payload):
+		def auth_response_handler(user, payload):
 			payload['expires_at'] = (datetime.utcnow() + current_app.config.get('TOKENS_EXPIRY') - datetime.utcfromtimestamp(0)).total_seconds()
 			return payload
 		```
@@ -388,7 +388,7 @@ class Tokens(object):
 		from datetime import datetime
 		
 		@tokens.refresh_response_handler
-		def refresh_response_handler(payload):
+		def refresh_response_handler(user, payload):
 			payload['expires_at'] = (datetime.utcnow() + current_app.config.get('TOKENS_EXPIRY') - datetime.utcfromtimestamp(0)).total_seconds()
 			return payload
 		```
