@@ -14,7 +14,7 @@ DEFAULT_CONFIG = {
 	'TOKENS_ENABLE_AUTHORIZE': True,
 	'TOKENS_AUTHORIZE_ENDPOINT': '/auth',
 	
-	'TOKENS_ENABLE_REFRESH': False,
+	'TOKENS_ENABLE_REFRESH': True,
 	'TOKENS_REFRESH_ENDPOINT': '/refresh'
 }
 
@@ -107,10 +107,10 @@ class Tokens(object):
 			bp = Blueprint(app.config.get('TOKENS_BLUEPRINT_NAME'), __name__)
 			
 			if app.config.get('TOKENS_ENABLE_AUTHORIZE'):
-				bp.route(_authorize_route, methods=['POST'])
+				bp.add_url_rule(app.config.get('TOKENS_AUTHORIZE_ENDPOINT'), 'authorize', _authorize_route, methods=['POST'])
 			
 			if app.config.get('TOKENS_ENABLE_REFRESH'):
-				bp.route(_refresh_route, methods=['POST'])
+				bp.add_url_rule(app.config.get('TOKENS_REFRESH_ENDPOINT'), 'refresh', _refresh_route, methods=['POST'])
 			
 			app.register_blueprint(bp, url_prefix=app.config.get('TOKENS_URL_PREFIX'))
 	
