@@ -13,6 +13,7 @@ class TestTokens(TestCase):
 		app = Flask(__name__)
 		app.config['TESTING'] = True
 		app.config['SECRET_KEY'] = SECRET_KEY
+		app.config['TOKENS_ENABLE_REFRESH'] = True
 		
 		tokens = Tokens(app)
 		
