@@ -1,7 +1,7 @@
 import string, random
 import unittest
 import datetime
-from flask import Flask
+from flask import Flask, jsonify
 from flask.ext.tokens import *
 from flask.ext.testing import TestCase
 import jwt
@@ -62,6 +62,16 @@ class TestTokens(TestCase):
 			payload['expires_at'] = (datetime.datetime.utcnow() + current_app.config.get('TOKENS_EXPIRY') - datetime.datetime.utcfromtimestamp(0)).total_seconds()
 			return payload
 		
+		@app.route('/')
+		@token_optional
+		def index():
+			return jsonify(user_id=current_user['id'] if current_user else 0)
+		
+		@app.route('/protected')
+		@token_required
+		def protected():
+			return jsonify(user_id=current_user['id'])
+		
 		return app
 	
 	def setUp(self):
@@ -106,6 +116,17 @@ class TestTokens(TestCase):
 		
 		self.assert_200(res)
 		jwt.decode(res.json['token'], SECRET_KEY)
+	
+	def test_optional_decorator_no_token(self):
+		res = self.client.get('/')
+		self.assert_200(res)
+		assert res.json['user_id'] == 0
+	
+	def test_required_decorator(self):
+		auth_res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
+		res = self.client.get('/protected', headers={'Authorization': 'Bearer ' + auth_res.json['token']})
+		self.assert_200(res)
+		assert res.json['user_id'] == 1
 
 if __name__ == '__main__':
 	unittest.main()

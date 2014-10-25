@@ -1,4 +1,5 @@
 import datetime
+import functools
 import jwt
 from flask import Blueprint, current_app, request, abort, jsonify, _request_ctx_stack
 from werkzeug.local import LocalProxy
@@ -18,10 +19,46 @@ DEFAULT_CONFIG = {
 	'TOKENS_REFRESH_ENDPOINT': '/auth/refresh'
 }
 
+
+
 # Proxy used to access the currently signed in user; this is only set if
 # verify_token has been called. If you want it available everywhere, you can
 # call verify_token in a before_request() handler.
-current_user = LocalProxy(lambda: getattr(_request_ctx_stack.top, 'current_user', None))	
+current_user = LocalProxy(lambda: getattr(_request_ctx_stack.top, 'current_user', None))
+
+
+
+def verify_authorization_header():
+	header = 'Authorization'
+	prefix = 'Bearer '
+	
+	if not header in request.headers or \
+		not request.headers[header].startswith(prefix):
+		return False
+	
+	ext = current_app.extensions['tokens']
+	token = request.headers[header][len(prefix):]
+	
+	return bool(ext.verify_token(token))
+
+def token_required(func):
+	@functools.wraps(func)
+	def f(*args, **kwargs):
+		if not verify_authorization_header():
+			abort(403)
+		return func(*args, **kwargs)
+	
+	return f
+
+def token_optional(func):
+	@functools.wraps(func)
+	def f(*args, **kwargs):
+		verify_authorization_header()
+		return func(*args, **kwargs)
+	
+	return f
+
+
 
 def _authorize_route():
 	'''Endpoint for authorizing a user.
@@ -72,6 +109,8 @@ def _refresh_route():
 		res = ext._refresh_response_handler(current_user, res)
 	
 	return jsonify(res)
+
+
 
 # Just stick this thing onto your Flask object, and decorate some handlers.
 class Tokens(object):
