@@ -16,7 +16,7 @@ setup(
     author_email='uppfinnarn@example.com',
     description='Token authentication for your Flask applications',
     long_description=__doc__,
-    packages=['flask_tokens'],
+    py_modules=['flask_tokens'],
     zip_safe=False,
     include_package_data=True,
     platforms='any',
