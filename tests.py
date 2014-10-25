@@ -93,6 +93,12 @@ class TestTokens(TestCase):
 		
 		assert 'user_id' in payload
 		assert 'iat' in payload
+	
+	def test_refresh_invalid(self):
+		self.assert_400(self.client.post('/auth/refresh', data={}))
+		self.assert_400(self.client.post('/auth/refresh', data={'token': 'test'}))
+		self.assert_400(self.client.post('/auth/refresh', data={'refresh_token': 'test'}))
+		self.assert_403(self.client.post('/auth/refresh', data={'token': 'test', 'refresh_token': 'test'}))
 
 if __name__ == '__main__':
 	unittest.main()

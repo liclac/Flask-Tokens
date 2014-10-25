@@ -149,6 +149,8 @@ class Tokens(object):
 	def refresh_token(self, token, refresh_token):
 		# Decode the token, completely ignoring the expiration
 		payload = self._decode(token, verify_expiration=False)
+		if not payload:
+			return None
 		
 		# Deserialize the user from the payload
 		user = self._deserializer(payload)
@@ -186,13 +188,13 @@ class Tokens(object):
 		return payload
 	
 	def _encode(self, payload):
-		leeway = current_app.config.get('TOKENS_LEEWAY')
 		secret = current_app.config.get('SECRET_KEY')
 		return jwt.encode(payload, secret)
 	
 	def _decode(self, token, verify_expiration=True):
 		try:
 			# Try to decode the token - this blows up spectacularly if it fails
+			leeway = current_app.config.get('TOKENS_LEEWAY')
 			return jwt.decode(token, current_app.config.get('SECRET_KEY'), leeway=leeway.total_seconds())
 		except jwt.DecodeError:
 			# The token was tampered with, corrupted or otherwise invalid
