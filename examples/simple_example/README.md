@@ -5,17 +5,16 @@ This is a simple application demonstrating how to use Flask-Tokens to protect a 
 
 To try it out, install Flask-Tokens, then run `app.py`, and use your favorite REST client to send a few requests:
 
-*
-    **GET:** `/`
+*   **GET:** `/`
     
-    Should say "Hi, anonymous!"
-*
-    **POST:** `/auth`
+    Should say "Hi, anonymous!"  
+
+*   **POST:** `/auth`  
     **Form:** `username=testuser&password=test123`
     
     This will give you a long token string; copypaste this
-*
-    **GET:** `/`
+
+*   **GET:** `/`  
     **Header:** `Authorization: Bearer <your token goes here>`
     
     Should now say "Hi, testuser!"
