@@ -76,8 +76,7 @@ class TestTokens(TestCase):
 		}
 	
 	def test_auth_invalid(self):
-		res = self.client.post('/auth', data={'username': 'username', 'password': 'wrongpass'})
-		self.assert_403(res)
+		self.assert_403(self.client.post('/auth', data={'username': 'username', 'password': 'wrongpass'}))
 	
 	def test_auth_valid(self):
 		res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
