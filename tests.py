@@ -4,12 +4,15 @@ import datetime
 from flask import Flask
 from flask.ext.tokens import *
 from flask.ext.testing import TestCase
+import jwt
+
+SECRET_KEY = 'Lorem ipsum'
 
 class TestTokens(TestCase):
 	def create_app(self):
 		app = Flask(__name__)
 		app.config['TESTING'] = True
-		app.config['SECRET_KEY'] = 'Lorem ipsum'
+		app.config['SECRET_KEY'] = SECRET_KEY
 		
 		tokens = Tokens(app)
 		
@@ -82,6 +85,14 @@ class TestTokens(TestCase):
 		assert 'refresh_token' in res.json
 		assert 'expires_at' in res.json
 		self.assert_200(res)
+	
+	def test_token_payload(self):
+		res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
+		token = res.json['token']
+		payload = jwt.decode(token, SECRET_KEY)
+		
+		assert 'user_id' in payload
+		assert 'iat' in payload
 
 if __name__ == '__main__':
 	unittest.main()
