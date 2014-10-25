@@ -1,6 +1,6 @@
 import datetime
 import jwt
-from flask import Blueprint, current_app, abort, jsonify, _request_ctx_stack
+from flask import Blueprint, current_app, request, abort, jsonify, _request_ctx_stack
 from werkzeug.local import LocalProxy
 
 DEFAULT_CONFIG = {
