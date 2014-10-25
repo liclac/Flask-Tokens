@@ -24,6 +24,9 @@ setup(
         'Flask',
         'pyjwt'
     ],
+    tests_require=[
+        'Flask-Testing'
+    ],
     classifiers=[
         'Environment :: Web Environment',
         'Intended Audience :: Developers',
