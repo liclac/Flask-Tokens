@@ -127,7 +127,7 @@ class Tokens(object):
 	
 	
 	
-	def __init__(self, app):
+	def __init__(self, app=None):
 		self.app = app
 		if self.app:
 			self.init_app(self.app)
