@@ -80,6 +80,7 @@ class TestTokens(TestCase):
 		res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
 		assert 'token' in res.json
 		assert 'refresh_token' in res.json
+		assert 'expires_at' in res.json
 		self.assert_200(res)
 
 if __name__ == '__main__':
