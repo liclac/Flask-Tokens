@@ -80,10 +80,11 @@ class TestTokens(TestCase):
 	
 	def test_auth_valid(self):
 		res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
+		self.assert_200(res)
 		assert 'token' in res.json
 		assert 'refresh_token' in res.json
 		assert 'expires_at' in res.json
-		self.assert_200(res)
+		jwt.decode(res.json['token'], SECRET_KEY)
 	
 	def test_token_payload(self):
 		res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
