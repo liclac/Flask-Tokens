@@ -15,7 +15,7 @@ DEFAULT_CONFIG = {
 	'TOKENS_AUTHORIZE_ENDPOINT': '/auth',
 	
 	'TOKENS_ENABLE_REFRESH': True,
-	'TOKENS_REFRESH_ENDPOINT': '/refresh'
+	'TOKENS_REFRESH_ENDPOINT': '/auth/refresh'
 }
 
 # Proxy used to access the currently signed in user; this is only set if
