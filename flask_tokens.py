@@ -21,7 +21,7 @@ DEFAULT_CONFIG = {
 # Proxy used to access the currently signed in user; this is only set if
 # verify_token has been called. If you want it available everywhere, you can
 # call verify_token in a before_request() handler.
-current_user = LocalProxy(lambda: _request_ctx_stack.top.current_user)
+current_user = LocalProxy(lambda: getattr(_request_ctx_stack.top, 'current_user', None))	
 
 def _authorize_route():
 	'''Endpoint for authorizing a user.
