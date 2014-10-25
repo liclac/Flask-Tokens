@@ -46,6 +46,7 @@ class TestTokens(TestCase):
 		def refresh_issuer(user):
 			if not user['refresh_token']:
 				user['refresh_token'] = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(50))
+			return user['refresh_token']
 		
 		
 		@tokens.auth_response_handler
@@ -77,6 +78,8 @@ class TestTokens(TestCase):
 	
 	def test_auth_valid(self):
 		res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
+		assert 'token' in res.json
+		assert 'refresh_token' in res.json
 		self.assert_200(res)
 
 if __name__ == '__main__':
