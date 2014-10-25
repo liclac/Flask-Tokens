@@ -84,34 +84,43 @@ class TestTokens(TestCase):
 			}
 		}
 	
+	def auth_headers(self, token, headers={}):
+		headers['Authorization'] = 'Bearer ' + token
+		return headers
+	
+	def login(self):
+		auth_res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
+		self.assert_200(auth_res)
+		return auth_res.json
+	
+	def test_auth_valid(self):
+		auth = self.login()
+		assert 'token' in auth
+		assert 'refresh_token' in auth
+		assert 'expires_at' in auth
+		jwt.decode(auth['token'], SECRET_KEY)
+	
 	def test_auth_invalid(self):
 		self.assert_403(self.client.post('/auth', data={'username': 'username', 'password': 'wrongpass'}))
 	
-	def test_auth_valid(self):
-		res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
-		self.assert_200(res)
-		assert 'token' in res.json
-		assert 'refresh_token' in res.json
-		assert 'expires_at' in res.json
-		jwt.decode(res.json['token'], SECRET_KEY)
-	
 	def test_token_payload(self):
-		res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
-		token = res.json['token']
-		payload = jwt.decode(token, SECRET_KEY)
+		auth = self.login()
+		payload = jwt.decode(auth['token'], SECRET_KEY)
 		
 		assert 'user_id' in payload
 		assert 'iat' in payload
 	
-	def test_refresh_invalid(self):
+	def test_refresh_missing_parameters(self):
 		self.assert_400(self.client.post('/auth/refresh', data={}))
 		self.assert_400(self.client.post('/auth/refresh', data={'token': 'test'}))
 		self.assert_400(self.client.post('/auth/refresh', data={'refresh_token': 'test'}))
+	
+	def test_refresh_invalid_credentials(self):
 		self.assert_403(self.client.post('/auth/refresh', data={'token': 'test', 'refresh_token': 'test'}))
 	
 	def test_refresh(self):
-		auth_res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
-		res = self.client.post('/auth/refresh', data={'token': auth_res.json['token'], 'refresh_token': auth_res.json['refresh_token']})
+		auth = self.login()
+		res = self.client.post('/auth/refresh', data={'token': auth['token'], 'refresh_token': auth['refresh_token']})
 		
 		self.assert_200(res)
 		jwt.decode(res.json['token'], SECRET_KEY)
@@ -122,14 +131,14 @@ class TestTokens(TestCase):
 		assert res.json['user_id'] == 0
 	
 	def test_optional_with_token(self):
-		auth_res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
-		res = self.client.get('/', headers={'Authorization': 'Bearer ' + auth_res.json['token']})
+		auth = self.login()
+		res = self.client.get('/', headers=self.auth_headers(auth['token']))
 		self.assert_200(res)
 		assert res.json['user_id'] == 1
 	
 	def test_required_decorator(self):
-		auth_res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
-		res = self.client.get('/protected', headers={'Authorization': 'Bearer ' + auth_res.json['token']})
+		auth = self.login()
+		res = self.client.get('/protected', headers=self.auth_headers(auth['token']))
 		self.assert_200(res)
 		assert res.json['user_id'] == 1
 
