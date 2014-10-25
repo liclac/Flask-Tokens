@@ -98,6 +98,13 @@ class TestTokens(TestCase):
 		self.assert_400(self.client.post('/auth/refresh', data={'token': 'test'}))
 		self.assert_400(self.client.post('/auth/refresh', data={'refresh_token': 'test'}))
 		self.assert_403(self.client.post('/auth/refresh', data={'token': 'test', 'refresh_token': 'test'}))
+	
+	def test_refresh(self):
+		auth_res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
+		res = self.client.post('/auth/refresh', data={'token': auth_res.json['token'], 'refresh_token': auth_res.json['refresh_token']})
+		
+		self.assert_200(res)
+		jwt.decode(res.json['token'], SECRET_KEY)
 
 if __name__ == '__main__':
 	unittest.main()
