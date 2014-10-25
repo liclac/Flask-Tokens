@@ -24,7 +24,12 @@ DEFAULT_CONFIG = {
 # Proxy used to access the currently signed in user; this is only set if
 # verify_token has been called. If you want it available everywhere, you can
 # call verify_token in a before_request() handler.
-current_user = LocalProxy(lambda: getattr(_request_ctx_stack.top, 'current_user', None))
+current_user = LocalProxy(lambda: _get_user())
+
+def _get_user():
+	if not hasattr(_request_ctx_stack.top, 'current_user'):
+		verify_authorization_header()
+	return _request_ctx_stack.top.current_user
 
 
 
@@ -34,6 +39,10 @@ def verify_authorization_header():
 	
 	if not header in request.headers or \
 		not request.headers[header].startswith(prefix):
+		# Nullify the current user to mark that, well, we tried. Don't try to
+		# overwrite it if a user is already authorized by other means though.
+		if not hasattr(_request_ctx_stack.top, 'current_user'):
+			_request_ctx_stack.top.current_user = None
 		return False
 	
 	ext = current_app.extensions['tokens']
@@ -46,14 +55,6 @@ def token_required(func):
 	def f(*args, **kwargs):
 		if not verify_authorization_header():
 			abort(403)
-		return func(*args, **kwargs)
-	
-	return f
-
-def token_optional(func):
-	@functools.wraps(func)
-	def f(*args, **kwargs):
-		verify_authorization_header()
 		return func(*args, **kwargs)
 	
 	return f
@@ -156,14 +157,17 @@ class Tokens(object):
 	
 	
 	def make_token(self, auth):
-		# Try to authorize the user first of all, no point in doing anything if
-		# the login is wrong >.>
+		# Try to authorize the user first of all
 		user = self._user_loader(auth)
+		
+		# Sign the user in for the remainder of the request, or just put a None
+		# there to mark that an attempt to log in was made, and that there's no
+		# need to try again when current_user is accessed next.
+		_request_ctx_stack.top.current_user = user
+		
+		# Don't do anything if the login was wrong
 		if not user:
 			return None
-		
-		# Sign the user in for the remainder of the request
-		_request_ctx_stack.top.current_user = user
 		
 		# Return a ready-made token
 		return self._encode(self._make_payload(user))
@@ -184,6 +188,10 @@ class Tokens(object):
 		if not self._verifier or self._verifier(user, payload):
 			_request_ctx_stack.top.current_user = user
 			return payload
+		else:
+			# Nullify the current user, to prevent attempts to repeatedly
+			# revalidate the user when current_user is accessed
+			_request_ctx_stack.top.current_user = None
 	
 	def refresh_token(self, token, refresh_token):
 		# Decode the token, completely ignoring the expiration
@@ -198,10 +206,17 @@ class Tokens(object):
 		# refresh was denied for whatever reason. This is very app-specific.
 		new_payload = self._refresh_handler(user, payload, refresh_token)
 		if new_payload:
+			# Sign the user in for the remainder of the request
+			_request_ctx_stack.top.current_user = user
+			
 			# Process it through the payload builder; this will assign a new
 			# expiry date, and let the user's payload handler postprocess it
 			new_payload = self._make_payload(user, new_payload)
 			return self._encode(payload)
+		else:
+			# Nullify the current user, to prevent attempts to repeatedly
+			# revalidate the user when current_user is accessed
+			_request_ctx_stack.top.current_user = None
 	
 	def issue_refresh_token(self, user):
 		return self._refresh_issuer(user)

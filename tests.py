@@ -63,7 +63,6 @@ class TestTokens(TestCase):
 			return payload
 		
 		@app.route('/')
-		@token_optional
 		def index():
 			return jsonify(user_id=current_user['id'] if current_user else 0)
 		
@@ -117,10 +116,16 @@ class TestTokens(TestCase):
 		self.assert_200(res)
 		jwt.decode(res.json['token'], SECRET_KEY)
 	
-	def test_optional_decorator_no_token(self):
+	def test_optional_no_token(self):
 		res = self.client.get('/')
 		self.assert_200(res)
 		assert res.json['user_id'] == 0
+	
+	def test_optional_with_token(self):
+		auth_res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
+		res = self.client.get('/', headers={'Authorization': 'Bearer ' + auth_res.json['token']})
+		self.assert_200(res)
+		assert res.json['user_id'] == 1
 	
 	def test_required_decorator(self):
 		auth_res = self.client.post('/auth', data={'username': 'username', 'password': 'password'})
