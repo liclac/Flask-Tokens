@@ -70,8 +70,8 @@ def _authorize_route():
 	ext = current_app.extensions['tokens']
 	res = {}
 	
-	token = ext.make_token(request.form)
-	if not token: abort(403)
+	params = request.get_json(force=True) or abort(400)
+	token = ext.make_token(params) or abort(403)
 	
 	res['token'] = token
 	
@@ -93,14 +93,15 @@ def _refresh_route():
 	
 	This is not mounted at all if 'TOKENS_ENABLE_REFRESH' is False.
 	'''
-	if not 'token' in request.form or not 'refresh_token' in request.form:
+	json = request.get_json(force=True)
+	if not 'token' in json or not 'refresh_token' in json:
 		abort(400)
 	
 	ext = current_app.extensions['tokens']
 	res = {}
 	
-	old_token = request.form['token']
-	refresh_token = request.form['refresh_token']
+	old_token = json['token']
+	refresh_token = json['refresh_token']
 	token = ext.refresh_token(old_token, refresh_token)
 	if not token: abort(403)
 	
